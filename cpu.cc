@@ -21,14 +21,76 @@ int main(){
     // const unsigned char *c_image = stbi_load("Images/Color_512.png", &c_width, &c_height, &c_bpp, imgchannels);
     unsigned char *g_image = stbi_load("Images/512/forest_color.jpg", &g_width, &g_height, &g_bpp, imgchannels );
 
-    int i=499;
-    int j=i;
+    int i = 0;
+    int j = 0;
     unsigned bytePerPixel = imgchannels;
-    unsigned char *pixelOffset = g_image + (i + g_height * j) * 3;
+    unsigned char *pixelOffset = g_image + (i + g_height * j) * imgchannels;
     unsigned char r = pixelOffset[0];
     unsigned char g = pixelOffset[1];
     unsigned char b = pixelOffset[2];
-    std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+    i = 0;
+    j = 1;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+    i = 0;
+    j = 2;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+    i = 1;
+    j = 0;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+    i = 2;
+    j = 0;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+
+    i = 40;
+    j = 40;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+
+    i = 499;
+    j = 499;
+    bytePerPixel = imgchannels;
+    pixelOffset = g_image + (i + g_height * j) * imgchannels;
+    r = pixelOffset[0];
+    g = pixelOffset[1];
+    b = pixelOffset[2];
+    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+    printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
 
     printf("Image[0] = %d\n", g_image[0]);
     printf("Image[1] = %d\n", g_image[1]);
