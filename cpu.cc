@@ -40,9 +40,9 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
  * Provide correct offsets of final Image this code assumes that finalImage point to the grid where the color it to be copied to.
  * Same goes for c_image
  */
-void colorImagePatch(unsigned char *finalImage, const unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
     unsigned char *c_image_pixel;
-    unsigned cahr *finalImage_pixel;
+    unsigned char *finalImage_pixel;
     for (int row = 0; row < gridSizeY; ++row) {
         for (int col = 0; col < gridSizeX; ++col) {
             c_image_pixel = getRGBOffset(col, row, c_image, dataSizeY, dataSizeX);
@@ -70,7 +70,7 @@ void colorImagePatch(unsigned char *finalImage, const unsigned char *c_image, in
  *             If colored and new threshold is < old
  *                 Color again with new color and remember threshold
  */
-void patchMatch(const unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
+void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
 {
     int widthIter = dataSizeY/gridSizeY;
     int heightIter = dataSizeX/gridSizeX;
