@@ -25,15 +25,34 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
     int sum_g = 0;
     int absDiff = 0;
 
-    for (int i = 0; i < gridSizeX; ++i) {
-        for (int j = 0; j < gridSizeX; ++j) {
-            sum_c_as_g += c_as_g_image[i + j * dataSizeX];
-            sum_g += g_image[i + j * dataSizeX];
+    for (int row = 0; row < gridSizeY; ++row) {
+        for (int col = 0; col < gridSizeX; ++col) {
+            sum_c_as_g += c_as_g_image[col + row * dataSizeX];
+            sum_g += g_image[col + row * dataSizeX];
             absDiff += abs(sum_c_as_g - sum_g);
         }
     }
 
     return absDiff;
+}
+
+/**
+ * Provide correct offsets of final Image this code assumes that finalImage point to the grid where the color it to be copied to.
+ * Same goes for c_image
+ */
+void colorImagePatch(unsigned char *finalImage, const unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+    unsigned char *c_image_pixel;
+    unsigned cahr *finalImage_pixel;
+    for (int row = 0; row < gridSizeY; ++row) {
+        for (int col = 0; col < gridSizeX; ++col) {
+            c_image_pixel = getRGBOffset(col, row, c_image, dataSizeY, dataSizeX);
+            finalImage_pixel = getRGBOffset(col, row, finalImage, dataSizeY, dataSizeX);
+            // finalImage[col + row * gridSizeX] = ;
+            finalImage_pixel[0] = c_image_pixel[0]; // Copy R
+            finalImage_pixel[1] = c_image_pixel[1]; // Copy G
+            finalImage_pixel[2] = c_image_pixel[2]; // Copy B
+        }
+    }
 }
 
 /**
@@ -55,6 +74,7 @@ void patchMatch(const unsigned char *c_image, const unsigned char *c_as_g_image,
 {
     int widthIter = dataSizeY/gridSizeY;
     int heightIter = dataSizeX/gridSizeX;
+    int absDiffGrid[heightIter][widthIter];
     int c_as_g_index_row = 0;
     int c_as_g_index_col = 0;
     int g_index_row = 0;
@@ -71,11 +91,29 @@ void patchMatch(const unsigned char *c_image, const unsigned char *c_as_g_image,
                     g_index_col = col_g * gridSizeY;
 
                     // Give the correct offset of c_as_g_image and g_image
-                    absDiff = compareGrids(c_as_g_image, g_image, gridSizeX, gridSizeY, dataSizeX, dataSizeY);
-
+                    absDiff = compareGrids(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
+                                           g_image + g_index_col + (g_index_row * dataSizeX), 
+                                           gridSizeX, 
+                                           gridSizeY,
+                                           dataSizeX,
+                                           dataSizeY);
                     if (absDiff < THRESHOLD) {
-                        if (finalImage[g_index_col + g_index_row * gridSizeX]) {
-                            
+                        if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                            colorImagePatch(finalImage,
+                                            c_image,
+                                            gridSizeX, 
+                                            gridSizeY,
+                                            dataSizeX,
+                                            dataSizeY);
+                            absDiffGrid[g_index_row][g_index_col] = absDiff;
+                        } else if (absDiff < absDiffGrid[g_index_row][g_index_col]){ // If new absDiff < previousAbsDiff then update
+                            colorImagePatch(finalImage,
+                                            c_image,
+                                            gridSizeX, 
+                                            gridSizeY,
+                                            dataSizeX,
+                                            dataSizeY);
+                            absDiffGrid[g_index_row][g_index_col] = absDiff;
                         }
                     }
                 }
