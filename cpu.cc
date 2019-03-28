@@ -148,7 +148,9 @@ int main(){
 
     /** Testing individual functions
      *  Color Image Patch function is working.
-     *  
+     *  CompareGrid Tested
+     *  getRGBOffset Tested
+     *  getIMGOffset Tested
      */
     // colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
 
