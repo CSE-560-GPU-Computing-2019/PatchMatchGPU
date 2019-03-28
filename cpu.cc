@@ -134,13 +134,11 @@ int main(){
     // unsigned char *img, *seq_img, *seq_img_device_in_host;
     // unsigned char *g_image_cpy;
 
-    // const unsigned char *g_image = stbi_load("Images/Grayscale_512.png", &g_width, &g_height, &g_bpp, imgchannels );
-    // const unsigned char *c_image = stbi_load("Images/Color_512.png", &c_width, &c_height, &c_bpp, imgchannels);
     unsigned char *c_image = stbi_load("Images/512/forest_color.jpg", &c_width, &c_height, &c_bpp, imgchannels );
-    unsigned char *c_as_g_image = stbi_load("Images/512/forest_color.jpg", &c_as_g_width, &c_as_g_height, &c_as_g_bpp, 1 );
+    unsigned char *c_as_g_image = stbi_load("Images/512/forest_grays.jpg", &c_as_g_width, &c_as_g_height, &c_as_g_bpp, 1 );
     unsigned char *g_image = stbi_load("Images/Grayscale_512.jpg", &g_width, &g_height, &g_bpp, 1 );
-    finalImage = (unsigned char*)malloc(g_width * g_height * sizeof(unsigned char));
-    memset(finalImage, '\0', g_width * g_height * sizeof(unsigned char));
+    finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
+    memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
 
     // i, j is same as x, y : x goes towards the right in the image, y goes below (0, 0) is at the top left in the image.
@@ -153,15 +151,15 @@ int main(){
     // unsigned char g = pixelOffset[1];
     // unsigned char b = pixelOffset[2];
     // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
-    unsigned char *offset = getRGBOffset(0, 0, c_image, c_height, c_width);
-    printf("rgb(%d, %d) = (%d, %d, %d)\n", 0, 0, offset[0], offset[1], offset[2]);
+    // unsigned char *offset = getRGBOffset(0, 0, c_image, c_height, c_width);
+    // printf("rgb(%d, %d) = (%d, %d, %d)\n", 0, 0, offset[0], offset[1], offset[2]);
 
-    printf("rgb(%d, %d) = (%d)\n", 0, 0, c_as_g_image[0]);
+    // printf("rgb(%d, %d) = (%d)\n", 0, 0, c_as_g_image[0]);
 
-    offset = getRGBOffset(20, 10, c_image, c_height, c_width);
-    printf("rgb(%d, %d) = (%d, %d, %d)\n", 20, 10, offset[0], offset[1], offset[2]);
+    // offset = getRGBOffset(20, 10, c_image, c_height, c_width);
+    // printf("rgb(%d, %d) = (%d, %d, %d)\n", 20, 10, offset[0], offset[1], offset[2]);
 
-    printf("rgb(%d, %d) = (%d)\n", 20, 10, c_as_g_image[126 + 35 * c_as_g_width]);
+    // printf("rgb(%d, %d) = (%d)\n", 20, 10, c_as_g_image[126 + 35 * c_as_g_width]);
 
 
 
@@ -218,7 +216,8 @@ int main(){
     //     g_image_cpy[i] = g_image[i];
     // }
 
-    // stbi_write_jpg("Images/512/forest_graysasdf.jpg", g_height, g_width, imgchannels, g_image_cpy, 0);
+    stbi_write_jpg("Images/512/forest_graycolored.jpg", g_height, g_width, 3, finalImage, 0);
 
+    free(finalImage);
     return 0;
 }

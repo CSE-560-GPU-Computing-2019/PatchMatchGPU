@@ -4,7 +4,7 @@
 
 cpu: cpu.cc
 	g++ cpu.cc -o cpu
-	./cpu
+	# ./cpu
 
 clean:
 	rm cpu
