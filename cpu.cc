@@ -8,8 +8,8 @@
 #include <time.h>
 
 #define imgchannels 3
-#define maskCols 3
-#define maskRows 3
+#define maskCols 2
+#define maskRows 2
 #define THRESHOLD 10 // In percentage
 
 // To access grayscale value at (i, j) or (x, y) do x + y * img_width
@@ -36,7 +36,7 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
             sum_g = g_image[col + row * dataSizeX];
             absDiff += abs(sum_c_as_g - sum_g);
         }
-        printf("Value of abs at row %d is %d\n", row, absDiff);
+        // printf("Value of abs at row %d is %d\n", row, absDiff);
     }
 
     return absDiff;
@@ -78,14 +78,15 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
  */
 void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
 {
-    int widthIter = dataSizeY/gridSizeY;
-    int heightIter = dataSizeX/gridSizeX;
+    int widthIter = dataSizeY/gridSizeX;
+    int heightIter = dataSizeX/gridSizeY;
     int absDiffGrid[heightIter][widthIter];
     int c_as_g_index_row = 0;
     int c_as_g_index_col = 0;
     int g_index_row = 0;
     int g_index_col = 0;
     int absDiff = 0;
+
 
     for (int row = 0; row < widthIter; ++row) { // Iterate over c_as_g_image
         c_as_g_index_row = row * gridSizeX;
@@ -95,6 +96,7 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
                 g_index_row = row_g * gridSizeX;
                 for (int col_g = 0; col_g < heightIter; ++col_g) { // Iterate over g_image
                     g_index_col = col_g * gridSizeY;
+                    printf("row: %d; col: %d; row_g: %d; col_g: %d\n", row, col, row_g, col_g);
 
                     // Give the correct offset of c_as_g_image and g_image
                     absDiff = compareGrids(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
@@ -105,17 +107,23 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
                                            dataSizeY);
                     if (absDiff < THRESHOLD) {
                         if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
-                            colorImagePatch(finalImage,
-                                            c_image,
-                                            gridSizeX, 
+                            // colorImagePatch(finalImage,
+                            //                 c_image,
+                            //                 gridSizeX, 
+                            //                 gridSizeY,
+                            //                 dataSizeX,
+                            //                 dataSizeY);
+                            colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                                            gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
                                             dataSizeY);
                             absDiffGrid[g_index_row][g_index_col] = absDiff;
                         } else if (absDiff < absDiffGrid[g_index_row][g_index_col]){ // If new absDiff < previousAbsDiff then update
-                            colorImagePatch(finalImage,
-                                            c_image,
-                                            gridSizeX, 
+                            colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                                            gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
                                             dataSizeY);
@@ -146,127 +154,122 @@ int main(){
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
-    /** Testing individual functions
+    printf("asdf\n");
+
+    patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+        /** Testing individual functions
      *  Color Image Patch function is working.
      *  CompareGrid Tested
      *  getRGBOffset Tested
      *  getIMGOffset Tested
      */
-    // colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
+        // colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
 
-    // colorImagePatch(getRGBOffset(200, 100, finalImage, c_height, c_width),
-    //                 getRGBOffset(200, 100, c_image, c_height, c_width),
-    //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+        // colorImagePatch(getRGBOffset(200, 100, finalImage, c_height, c_width),
+        //                 getRGBOffset(200, 100, c_image, c_height, c_width),
+        //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
 
-    // colorImagePatch(getRGBOffset(400, 300, finalImage, c_height, c_width),
-    //                 getRGBOffset(400, 300, c_image, c_height, c_width),
-    //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
- 
-    printf("3x3 grid for c_as_g_image:\n");
-    printf("%d, %d, %d\n", c_as_g_image[0], c_as_g_image[1], c_as_g_image[2]);
-    printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 1], c_as_g_image[1 + c_as_g_width * 1], c_as_g_image[2 + c_as_g_width * 1]);
-    printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 2], c_as_g_image[1 + c_as_g_width * 2], c_as_g_image[2 + c_as_g_width * 2]);
+        // colorImagePatch(getRGBOffset(400, 300, finalImage, c_height, c_width),
+        //                 getRGBOffset(400, 300, c_image, c_height, c_width),
+        //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
 
-    printf("3x3 grid for g_image:\n");
-    printf("%d, %d, %d\n", g_image[0], g_image[1], g_image[2]);
-    printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 1], g_image[1 + c_as_g_width * 1], g_image[2 + c_as_g_width * 1]);
-    printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 2], g_image[1 + c_as_g_width * 2], g_image[2 + c_as_g_width * 2]);
+        // printf("3x3 grid for c_as_g_image:\n");
+        // printf("%d, %d, %d\n", c_as_g_image[0], c_as_g_image[1], c_as_g_image[2]);
+        // printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 1], c_as_g_image[1 + c_as_g_width * 1], c_as_g_image[2 + c_as_g_width * 1]);
+        // printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 2], c_as_g_image[1 + c_as_g_width * 2], c_as_g_image[2 + c_as_g_width * 2]);
 
-    printf("Grid abs diff sum at %d, %d = %d\n", 0, 0, compareGrids(c_as_g_image, g_image, maskCols, maskRows, g_width, g_height));
+        // printf("3x3 grid for g_image:\n");
+        // printf("%d, %d, %d\n", g_image[0], g_image[1], g_image[2]);
+        // printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 1], g_image[1 + c_as_g_width * 1], g_image[2 + c_as_g_width * 1]);
+        // printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 2], g_image[1 + c_as_g_width * 2], g_image[2 + c_as_g_width * 2]);
 
-    printf("3x3 grid for c_as_g_image:\n");
-    printf("%d, %d, %d\n", c_as_g_image[20 + 30 * c_as_g_width ], c_as_g_image[21 + 30 * c_as_g_width], c_as_g_image[22 + 30 * c_as_g_width]);
-    printf("%d, %d, %d\n", c_as_g_image[20 + 31 * c_as_g_width ], c_as_g_image[21 + 31 * c_as_g_width], c_as_g_image[22 + 31 * c_as_g_width]);
-    printf("%d, %d, %d\n", c_as_g_image[20 + 32 * c_as_g_width ], c_as_g_image[21 + 32 * c_as_g_width], c_as_g_image[22 + 32 * c_as_g_width]);
+        // printf("Grid abs diff sum at %d, %d = %d\n", 0, 0, compareGrids(c_as_g_image, g_image, maskCols, maskRows, g_width, g_height));
 
-    printf("3x3 grid for g_image:\n");
-    printf("%d, %d, %d\n", g_image[20 + 30 * c_as_g_width ], g_image[21 + 30 * c_as_g_width], g_image[22 + 30 * c_as_g_width]);
-    printf("%d, %d, %d\n", g_image[20 + 31 * c_as_g_width ], g_image[21 + 31 * c_as_g_width], g_image[22 + 31 * c_as_g_width]);
-    printf("%d, %d, %d\n", g_image[20 + 32 * c_as_g_width ], g_image[21 + 32 * c_as_g_width], g_image[22 + 32 * c_as_g_width]);
-    printf("Grid abs diff sum at %d, %d = %d\n", 20, 30, compareGrids(getIMGOffset(20, 30, c_as_g_image, c_height, c_width),
-                                                                      getIMGOffset(20, 30, g_image, c_height, c_width), 
-                                                                      maskCols, maskRows, g_width, g_height));
+        // printf("3x3 grid for c_as_g_image:\n");
+        // printf("%d, %d, %d\n", c_as_g_image[20 + 30 * c_as_g_width ], c_as_g_image[21 + 30 * c_as_g_width], c_as_g_image[22 + 30 * c_as_g_width]);
+        // printf("%d, %d, %d\n", c_as_g_image[20 + 31 * c_as_g_width ], c_as_g_image[21 + 31 * c_as_g_width], c_as_g_image[22 + 31 * c_as_g_width]);
+        // printf("%d, %d, %d\n", c_as_g_image[20 + 32 * c_as_g_width ], c_as_g_image[21 + 32 * c_as_g_width], c_as_g_image[22 + 32 * c_as_g_width]);
 
+        // printf("3x3 grid for g_image:\n");
+        // printf("%d, %d, %d\n", g_image[20 + 30 * c_as_g_width ], g_image[21 + 30 * c_as_g_width], g_image[22 + 30 * c_as_g_width]);
+        // printf("%d, %d, %d\n", g_image[20 + 31 * c_as_g_width ], g_image[21 + 31 * c_as_g_width], g_image[22 + 31 * c_as_g_width]);
+        // printf("%d, %d, %d\n", g_image[20 + 32 * c_as_g_width ], g_image[21 + 32 * c_as_g_width], g_image[22 + 32 * c_as_g_width]);
+        // printf("Grid abs diff sum at %d, %d = %d\n", 20, 30, compareGrids(getIMGOffset(20, 30, c_as_g_image, c_height, c_width),
+        //                                                                   getIMGOffset(20, 30, g_image, c_height, c_width),
+        //                                                                   maskCols, maskRows, g_width, g_height));
 
+        // i, j is same as x, y : x goes towards the right in the image, y goes below (0, 0) is at the top left in the image.
+        // int i = 0;
+        // int j = 0;
+        // unsigned bytePerPixel = imgchannels;
 
+        // unsigned char *pixelOffset = c_image + (i + c_height * j) * imgchannels;
+        // unsigned char r = pixelOffset[0];
+        // unsigned char g = pixelOffset[1];
+        // unsigned char b = pixelOffset[2];
+        // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+        // unsigned char *offset = getRGBOffset(0, 0, c_image, c_height, c_width);
+        // printf("rgb(%d, %d) = (%d, %d, %d)\n", 0, 0, offset[0], offset[1], offset[2]);
 
+        // printf("rgb(%d, %d) = (%d)\n", 0, 0, c_as_g_image[0]);
 
-    // i, j is same as x, y : x goes towards the right in the image, y goes below (0, 0) is at the top left in the image.
-    // int i = 0;
-    // int j = 0;
-    // unsigned bytePerPixel = imgchannels;
+        // offset = getRGBOffset(20, 10, c_image, c_height, c_width);
+        // printf("rgb(%d, %d) = (%d, %d, %d)\n", 20, 10, offset[0], offset[1], offset[2]);
 
-    // unsigned char *pixelOffset = c_image + (i + c_height * j) * imgchannels;
-    // unsigned char r = pixelOffset[0];
-    // unsigned char g = pixelOffset[1];
-    // unsigned char b = pixelOffset[2];
-    // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
-    // unsigned char *offset = getRGBOffset(0, 0, c_image, c_height, c_width);
-    // printf("rgb(%d, %d) = (%d, %d, %d)\n", 0, 0, offset[0], offset[1], offset[2]);
+        // printf("rgb(%d, %d) = (%d)\n", 20, 10, c_as_g_image[126 + 35 * c_as_g_width]);
 
-    // printf("rgb(%d, %d) = (%d)\n", 0, 0, c_as_g_image[0]);
+        // i = 20;
+        // j = 10;
+        // bytePerPixel = imgchannels;
+        // pixelOffset = c_image + (i + c_height * j) * imgchannels;
+        // r = pixelOffset[0];
+        // g = pixelOffset[1];
+        // b = pixelOffset[2];
+        // // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+        // printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
 
-    // offset = getRGBOffset(20, 10, c_image, c_height, c_width);
-    // printf("rgb(%d, %d) = (%d, %d, %d)\n", 20, 10, offset[0], offset[1], offset[2]);
+        // i = 499;
+        // j = 499;
+        // bytePerPixel = imgchannels;
+        // pixelOffset = c_image + (i + c_height * j) * imgchannels;
+        // r = pixelOffset[0];
+        // g = pixelOffset[1];
+        // b = pixelOffset[2];
+        // // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+        // printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
 
-    // printf("rgb(%d, %d) = (%d)\n", 20, 10, c_as_g_image[126 + 35 * c_as_g_width]);
+        // printf("Image[0] = %d\n", g_image[0]);
+        // printf("Image[1] = %d\n", g_image[1]);
+        // printf("Image[2] = %d\n", g_image[2]);
+        // printf("Image[3] = %d\n", g_image[3]);
+        // printf("Image[4] = %d\n", g_image[4]);
+        // printf("Image[4] = %d\n", g_image[5]);
+        // printf("Image[4] = %d\n", g_image[6]);
+        // printf("Image[4] = %d\n", g_image[7]);
+        // printf("Image[4] = %d\n", g_image[8]);
+        // printf("Image[4] = %d\n", g_image[9]);
 
+        // for(int i=0; i < g_height; i++){
+        //     for(int j=0; j < g_width; j++){
+        //         unsigned bytePerPixel = imgchannels;
+        //         unsigned char *pixelOffset = g_image + (i + g_height * j) * bytePerPixel;
+        //         unsigned char r = pixelOffset[0];
+        //         unsigned char g = pixelOffset[1];
+        //         unsigned char b = pixelOffset[2];
+        //         std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
+        //     }
+        // }
 
+        // g_image_cpy = (unsigned char*) malloc(g_width * g_height * sizeof(unsigned char));
 
-    // i = 20;
-    // j = 10;
-    // bytePerPixel = imgchannels;
-    // pixelOffset = c_image + (i + c_height * j) * imgchannels;
-    // r = pixelOffset[0];
-    // g = pixelOffset[1];
-    // b = pixelOffset[2];
-    // // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
-    // printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
+        // std::cout << "Grayscale : " << g_height << " " << g_width << std::endl;
+        // std::cout << "Color     : " << c_height << " " << c_width << std::endl;
 
+        // for(int i=0; i< g_height * g_width * imgchannels; i++){
+        //     g_image_cpy[i] = g_image[i];
+        // }
 
-    // i = 499;
-    // j = 499;
-    // bytePerPixel = imgchannels;
-    // pixelOffset = c_image + (i + c_height * j) * imgchannels;
-    // r = pixelOffset[0];
-    // g = pixelOffset[1];
-    // b = pixelOffset[2];
-    // // std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
-    // printf("rgb(%d, %d) = (%d, %d, %d)\n", i, j, r, g, b);
-
-    // printf("Image[0] = %d\n", g_image[0]);
-    // printf("Image[1] = %d\n", g_image[1]);
-    // printf("Image[2] = %d\n", g_image[2]);
-    // printf("Image[3] = %d\n", g_image[3]);
-    // printf("Image[4] = %d\n", g_image[4]);
-    // printf("Image[4] = %d\n", g_image[5]);
-    // printf("Image[4] = %d\n", g_image[6]);
-    // printf("Image[4] = %d\n", g_image[7]);
-    // printf("Image[4] = %d\n", g_image[8]);
-    // printf("Image[4] = %d\n", g_image[9]);
-
-    // for(int i=0; i < g_height; i++){
-    //     for(int j=0; j < g_width; j++){
-    //         unsigned bytePerPixel = imgchannels;
-    //         unsigned char *pixelOffset = g_image + (i + g_height * j) * bytePerPixel;
-    //         unsigned char r = pixelOffset[0];
-    //         unsigned char g = pixelOffset[1];
-    //         unsigned char b = pixelOffset[2];
-    //         std::cout << "RGB       : " << (int)r << ":" << (int)g << ":" << (int)b << std::endl;
-    //     }
-    // }
-
-    // g_image_cpy = (unsigned char*) malloc(g_width * g_height * sizeof(unsigned char));
-
-    // std::cout << "Grayscale : " << g_height << " " << g_width << std::endl;
-    // std::cout << "Color     : " << c_height << " " << c_width << std::endl;
-
-
-    // for(int i=0; i< g_height * g_width * imgchannels; i++){
-    //     g_image_cpy[i] = g_image[i];
-    // }
-
-    stbi_write_jpg("Images/512/forest_graycolored.jpg", g_height, g_width, 3, finalImage, 0);
+        stbi_write_jpg("Images/512/forest_graycolored.jpg", g_height, g_width, 3, finalImage, 0);
 
     free(finalImage);
     return 0;
