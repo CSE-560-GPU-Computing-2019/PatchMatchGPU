@@ -8,15 +8,20 @@
 #include <time.h>
 
 #define imgchannels 3
-#define maskCols 50
-#define maskRows 50
+#define maskCols 3
+#define maskRows 3
 #define THRESHOLD 10 // In percentage
 
 // To access grayscale value at (i, j) or (x, y) do x + y * img_width
 
 // To access rgb values of colored image, on the returned value index 0 is R, index 1 if G and 2 is B
 unsigned char *getRGBOffset(int i, int j, unsigned char *c_image, int img_height, int img_width) {
-    return c_image + (i + img_height * j) * imgchannels;
+    return c_image + (i + img_height * j) * 3;
+}
+
+// To access rgb values of colored image, on the returned value index 0 is R, index 1 if G and 2 is B
+unsigned char *getIMGOffset(int i, int j, unsigned char *c_image, int img_height, int img_width) {
+    return c_image + (i + img_height * j);
 }
 
 // Send offset of image to the beginning or top-left of the starting of the grid.
@@ -27,10 +32,11 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
 
     for (int row = 0; row < gridSizeY; ++row) {
         for (int col = 0; col < gridSizeX; ++col) {
-            sum_c_as_g += c_as_g_image[col + row * dataSizeX];
-            sum_g += g_image[col + row * dataSizeX];
+            sum_c_as_g = c_as_g_image[col + row * dataSizeX];
+            sum_g = g_image[col + row * dataSizeX];
             absDiff += abs(sum_c_as_g - sum_g);
         }
+        printf("Value of abs at row %d is %d\n", row, absDiff);
     }
 
     return absDiff;
@@ -140,16 +146,45 @@ int main(){
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
-    colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
+    /** Testing individual functions
+     *  Color Image Patch function is working.
+     *  
+     */
+    // colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
 
+    // colorImagePatch(getRGBOffset(200, 100, finalImage, c_height, c_width),
+    //                 getRGBOffset(200, 100, c_image, c_height, c_width),
+    //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
 
-    colorImagePatch(getRGBOffset(200, 100, finalImage, c_height, c_width),
-                    getRGBOffset(200, 100, c_image, c_height, c_width),
-                    maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+    // colorImagePatch(getRGBOffset(400, 300, finalImage, c_height, c_width),
+    //                 getRGBOffset(400, 300, c_image, c_height, c_width),
+    //                 maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+ 
+    printf("3x3 grid for c_as_g_image:\n");
+    printf("%d, %d, %d\n", c_as_g_image[0], c_as_g_image[1], c_as_g_image[2]);
+    printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 1], c_as_g_image[1 + c_as_g_width * 1], c_as_g_image[2 + c_as_g_width * 1]);
+    printf("%d, %d, %d\n", c_as_g_image[0 + c_as_g_width * 2], c_as_g_image[1 + c_as_g_width * 2], c_as_g_image[2 + c_as_g_width * 2]);
 
-    colorImagePatch(getRGBOffset(400, 300, finalImage, c_height, c_width),
-                    getRGBOffset(400, 300, c_image, c_height, c_width),
-                    maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+    printf("3x3 grid for g_image:\n");
+    printf("%d, %d, %d\n", g_image[0], g_image[1], g_image[2]);
+    printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 1], g_image[1 + c_as_g_width * 1], g_image[2 + c_as_g_width * 1]);
+    printf("%d, %d, %d\n", g_image[0 + c_as_g_width * 2], g_image[1 + c_as_g_width * 2], g_image[2 + c_as_g_width * 2]);
+
+    printf("Grid abs diff sum at %d, %d = %d\n", 0, 0, compareGrids(c_as_g_image, g_image, maskCols, maskRows, g_width, g_height));
+
+    printf("3x3 grid for c_as_g_image:\n");
+    printf("%d, %d, %d\n", c_as_g_image[20 + 30 * c_as_g_width ], c_as_g_image[21 + 30 * c_as_g_width], c_as_g_image[22 + 30 * c_as_g_width]);
+    printf("%d, %d, %d\n", c_as_g_image[20 + 31 * c_as_g_width ], c_as_g_image[21 + 31 * c_as_g_width], c_as_g_image[22 + 31 * c_as_g_width]);
+    printf("%d, %d, %d\n", c_as_g_image[20 + 32 * c_as_g_width ], c_as_g_image[21 + 32 * c_as_g_width], c_as_g_image[22 + 32 * c_as_g_width]);
+
+    printf("3x3 grid for g_image:\n");
+    printf("%d, %d, %d\n", g_image[20 + 30 * c_as_g_width ], g_image[21 + 30 * c_as_g_width], g_image[22 + 30 * c_as_g_width]);
+    printf("%d, %d, %d\n", g_image[20 + 31 * c_as_g_width ], g_image[21 + 31 * c_as_g_width], g_image[22 + 31 * c_as_g_width]);
+    printf("%d, %d, %d\n", g_image[20 + 32 * c_as_g_width ], g_image[21 + 32 * c_as_g_width], g_image[22 + 32 * c_as_g_width]);
+    printf("Grid abs diff sum at %d, %d = %d\n", 20, 30, compareGrids(getIMGOffset(20, 30, c_as_g_image, c_height, c_width),
+                                                                      getIMGOffset(20, 30, g_image, c_height, c_width), 
+                                                                      maskCols, maskRows, g_width, g_height));
+
 
 
 
