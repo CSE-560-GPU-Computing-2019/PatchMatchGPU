@@ -8,8 +8,8 @@
 #include <time.h>
 
 #define imgchannels 3
-#define maskCols 3
-#define maskRows 3
+#define maskCols 50
+#define maskRows 50
 #define THRESHOLD 10 // In percentage
 
 // To access grayscale value at (i, j) or (x, y) do x + y * img_width
@@ -139,6 +139,19 @@ int main(){
     unsigned char *g_image = stbi_load("Images/Grayscale_512.jpg", &g_width, &g_height, &g_bpp, 1 );
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
+
+    colorImagePatch(finalImage, c_image, maskCols, maskRows, c_width, c_height); // Color at index 0, 0
+
+
+    colorImagePatch(getRGBOffset(200, 100, finalImage, c_height, c_width),
+                    getRGBOffset(200, 100, c_image, c_height, c_width),
+                    maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+
+    colorImagePatch(getRGBOffset(400, 300, finalImage, c_height, c_width),
+                    getRGBOffset(400, 300, c_image, c_height, c_width),
+                    maskCols, maskRows, c_width, c_height); // Color at index 200, 100
+
+
 
 
     // i, j is same as x, y : x goes towards the right in the image, y goes below (0, 0) is at the top left in the image.
