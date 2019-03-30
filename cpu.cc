@@ -10,7 +10,10 @@
 #define imgchannels 3
 #define maskCols 2
 #define maskRows 2
-#define THRESHOLD 10 // In percentage
+// #define THRESHOLD 100 // In percentage
+#define MAXLEN 1024 // Max length of image paths
+
+int THRESHOLD = 0;
 
 // To access grayscale value at (i, j) or (x, y) do x + y * img_width
 
@@ -51,6 +54,7 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
     unsigned char *finalImage_pixel;
     for (int row = 0; row < gridSizeY; ++row) {
         for (int col = 0; col < gridSizeX; ++col) {
+            // printf("Row in colorImagePatch is: %d, col is: %d\n", row, col);
             c_image_pixel = getRGBOffset(col, row, c_image, dataSizeY, dataSizeX);
             finalImage_pixel = getRGBOffset(col, row, finalImage, dataSizeY, dataSizeX);
             // finalImage[col + row * gridSizeX] = ;
@@ -59,6 +63,7 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
             finalImage_pixel[2] = c_image_pixel[2]; // Copy B
         }
     }
+    // printf("HEREBOID\n");
 }
 
 /**
@@ -78,8 +83,8 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
  */
 void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
 {
-    int widthIter = dataSizeY/gridSizeX;
-    int heightIter = dataSizeX/gridSizeY;
+    int widthIter = dataSizeX/gridSizeX;
+    int heightIter = dataSizeY/gridSizeY;
     int absDiffGrid[heightIter][widthIter];
     int c_as_g_index_row = 0;
     int c_as_g_index_col = 0;
@@ -87,6 +92,8 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
     int g_index_col = 0;
     int absDiff = 0;
 
+    printf("widthIter %d; heightIter %d\n", widthIter, heightIter);
+    // getc(0);
 
     for (int row = 0; row < widthIter; ++row) { // Iterate over c_as_g_image
         c_as_g_index_row = row * gridSizeX;
@@ -96,7 +103,7 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
                 g_index_row = row_g * gridSizeX;
                 for (int col_g = 0; col_g < heightIter; ++col_g) { // Iterate over g_image
                     g_index_col = col_g * gridSizeY;
-                    printf("row: %d; col: %d; row_g: %d; col_g: %d\n", row, col, row_g, col_g);
+                    // printf("row: %d; col: %d; row_g: %d; col_g: %d, g_index_row: %d, g_index_col: %d, c_as_g_index_row: %d, c_as_g_index_col: %d\n", row, col, row_g, col_g, g_index_row, g_index_col, c_as_g_index_row, c_as_g_index_col);
 
                     // Give the correct offset of c_as_g_image and g_image
                     absDiff = compareGrids(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
@@ -113,21 +120,30 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
                             //                 gridSizeY,
                             //                 dataSizeX,
                             //                 dataSizeY);
+                            // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                            //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                            //                 gridSizeX,
+                            //                 gridSizeY,
+                            //                 dataSizeX,
+                            //                 dataSizeY);
+                            colorImagePatch(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                            getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                                            gridSizeX,
+                                            gridSizeY,
+                                            dataSizeX,
+                                            dataSizeY);
+                            // absDiffGrid[g_index_row][g_index_col] = absDiff;
+                            absDiffGrid[row_g][col_g] = absDiff; // row_g and col_g because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                            // printf("BOIBOI\n");
+                        } 
+                        else if (absDiff < absDiffGrid[row_g][col_g]){ // If new absDiff < previousAbsDiff then update
                             colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
                                             c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
                                             gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
                                             dataSizeY);
-                            absDiffGrid[g_index_row][g_index_col] = absDiff;
-                        } else if (absDiff < absDiffGrid[g_index_row][g_index_col]){ // If new absDiff < previousAbsDiff then update
-                            colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
-                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
-                                            gridSizeX,
-                                            gridSizeY,
-                                            dataSizeX,
-                                            dataSizeY);
-                            absDiffGrid[g_index_row][g_index_col] = absDiff;
+                            absDiffGrid[row_g][col_g] = absDiff;
                         }
                     }
                 }
@@ -138,9 +154,49 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
     // printf("\n");
 }
 
+void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *coloredImageName, 
+                       char *coloredAsGrayscaleImageName, char *grayscaleImagePath,
+                       char *coloredImagePath, char *coloredAsGrayscaleImagePath,
+                       char * outputImagePath) {
+    char folderName[] = "Images";
+    char ch;
+    snprintf(grayscaleImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, grayscaleInputName);
+    snprintf(coloredImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, coloredImageName);
+    snprintf(coloredAsGrayscaleImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, coloredAsGrayscaleImageName);
+    snprintf(outputImagePath, MAXLEN, "%s/%s/", folderName, sizeOfAllImage);
+    strncat(outputImagePath, grayscaleInputName, strrchr(grayscaleInputName, '.') - grayscaleInputName);
+    strcat(outputImagePath, "_colored.jpg");
+
+    // printf("Input . start at %s\n", strrchr(grayscaleInputName, '.'));
+
+
+    printf("Path generated are: \n");
+    printf("grayscaleImagePath: %s\n", grayscaleImagePath);
+    printf("coloredImagePath: %s\n", coloredImagePath);
+    printf("coloredAsGrayscaleImagePath: %s\n", coloredAsGrayscaleImagePath);
+    printf("outputImagePath: %s\n", outputImagePath);
+    printf("Press any key to continue\n");
+    scanf("%c",&ch);
+}
+
 // g -> Grayscale
 // c -> Color
-int main(){
+int main(int argc, char *argv[]){
+    if (argc != 2) {
+        printf("Usage: ./cpu <THRESHOLD>");
+        return 1;
+    }
+    THRESHOLD = atoi(argv[1]);
+    char sizeOfAllImage[] = "256"; // Must be a square image and all must be of the same size
+    char grayscaleInputName[] = "Grayscale.jpg"; // Image to be colored
+    char coloredImageName[] = "forest_color.jpg"; // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "forest_grays.jpg"; // The coloredImage changed to grayscale.
+
+    char grayscaleImagePath[MAXLEN] = {};
+    char coloredImagePath[MAXLEN] = {};
+    char coloredAsGrayscaleImagePath[MAXLEN] = {};
+    char outputImagePath[MAXLEN] = {};
+
     int c_width, c_height, c_bpp; // For reading color image
     int c_as_g_width, c_as_g_height, c_as_g_bpp; // For reading grayscale of color iamge. Don't have a way to convert to grayscale in the code.
     int g_width, g_height, g_bpp; // Image to be colored
@@ -148,9 +204,11 @@ int main(){
     // unsigned char *img, *seq_img, *seq_img_device_in_host;
     // unsigned char *g_image_cpy;
 
-    unsigned char *c_image = stbi_load("Images/512/forest_color.jpg", &c_width, &c_height, &c_bpp, imgchannels );
-    unsigned char *c_as_g_image = stbi_load("Images/512/forest_grays.jpg", &c_as_g_width, &c_as_g_height, &c_as_g_bpp, 1 );
-    unsigned char *g_image = stbi_load("Images/Grayscale_512.jpg", &g_width, &g_height, &g_bpp, 1 );
+    generatePathNames(sizeOfAllImage, grayscaleInputName, coloredImageName, coloredAsGrayscaleImageName, grayscaleImagePath, coloredImagePath, coloredAsGrayscaleImagePath, outputImagePath);
+
+    unsigned char *c_image = stbi_load(coloredImagePath, &c_width, &c_height, &c_bpp, imgchannels );
+    unsigned char *c_as_g_image = stbi_load(coloredAsGrayscaleImagePath, &c_as_g_width, &c_as_g_height, &c_as_g_bpp, 1 );
+    unsigned char *g_image = stbi_load(grayscaleImagePath, &g_width, &g_height, &g_bpp, 1 );
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
@@ -269,7 +327,7 @@ int main(){
         //     g_image_cpy[i] = g_image[i];
         // }
 
-        stbi_write_jpg("Images/512/forest_graycolored.jpg", g_height, g_width, 3, finalImage, 0);
+        stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
 
     free(finalImage);
     return 0;
