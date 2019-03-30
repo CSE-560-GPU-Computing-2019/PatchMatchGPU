@@ -35,6 +35,8 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
 
     for (int row = 0; row < gridSizeY; ++row) {
         for (int col = 0; col < gridSizeX; ++col) {
+            if (col + (row * dataSizeX) > dataSizeX * dataSizeY) 
+                continue;
             sum_c_as_g = c_as_g_image[col + row * dataSizeX];
             sum_g = g_image[col + row * dataSizeX];
             absDiff += abs(sum_c_as_g - sum_g);
@@ -44,6 +46,33 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
 
     return absDiff;
 }
+
+// Send offset of image to the beginning or top-left of the starting of the grid.
+int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char *g_image, const unsigned char *c_as_g_image_BASE, const unsigned char *g_image_BASE, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+    int sum_c_as_g = 0;
+    int sum_g = 0;
+    int absDiff = 0;
+
+    for (int row = -2; row < gridSizeY/2; ++row) {
+        for (int col = -2; col < gridSizeX/2; ++col) {
+            if (c_as_g_image + col + row * dataSizeX < c_as_g_image_BASE)
+                continue;
+            if (g_image + col + row * dataSizeX < g_image_BASE)
+                continue;
+            if (c_as_g_image + col + row * dataSizeX > c_as_g_image_BASE + dataSizeX * dataSizeY)
+                continue;
+            if (g_image + col + row * dataSizeX > g_image_BASE + dataSizeX * dataSizeY)
+                continue;
+            sum_c_as_g = c_as_g_image[col + row * dataSizeX];
+            sum_g = g_image[col + row * dataSizeX];
+            absDiff += abs(sum_c_as_g - sum_g);
+        }
+        // printf("Value of abs at row %d is %d\n", row, absDiff);
+    }
+
+    return absDiff;
+}
+
 
 /**
  * Provide correct offsets of final Image this code assumes that finalImage point to the grid where the color it to be copied to.
@@ -65,6 +94,120 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
     }
     // printf("HEREBOID\n");
 }
+
+/**
+ * Provide correct offsets of final Image this code assumes that finalImage point to the grid where the color it to be copied to.
+ * Same goes for c_image COLORS PIXEL INSTEAD OF GRID
+ */
+void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+    unsigned char *c_image_pixel;
+    unsigned char *finalImage_pixel;
+
+    // if (finalImage + 2 * dataSizeX + 2 > finalImage)
+    //     return;
+    // if (c_image + 2 * dataSizeX + 2 > strlen(c_image))
+    //     return;
+
+    c_image_pixel = getRGBOffset(0, 0, c_image, dataSizeY, dataSizeX);
+    finalImage_pixel = getRGBOffset(0, 0, finalImage, dataSizeY, dataSizeX);
+    // finalImage[col + row * gridSizeX] = ;
+    finalImage_pixel[0] = c_image_pixel[0]; // Copy R
+    finalImage_pixel[1] = c_image_pixel[1]; // Copy G
+    finalImage_pixel[2] = c_image_pixel[2]; // Copy B
+    // for (int row = 0; row < gridSizeY; ++row) {
+    //     for (int col = 0; col < gridSizeX; ++col) {
+    //         // printf("Row in colorImagePatch is: %d, col is: %d\n", row, col);
+    //         c_image_pixel = getRGBOffset(col, row, c_image, dataSizeY, dataSizeX);
+    //         finalImage_pixel = getRGBOffset(col, row, finalImage, dataSizeY, dataSizeX);
+    //         // finalImage[col + row * gridSizeX] = ;
+    //         finalImage_pixel[0] = c_image_pixel[0]; // Copy R
+    //         finalImage_pixel[1] = c_image_pixel[1]; // Copy G
+    //         finalImage_pixel[2] = c_image_pixel[2]; // Copy B
+    //     }
+    // }
+    // printf("HEREBOID\n");
+}
+
+
+void patchMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
+{
+    // int widthIter = dataSizeX/gridSizeX;
+    // int heightIter = dataSizeY/gridSizeY;
+    int absDiffGrid[dataSizeY][dataSizeX];
+    int c_as_g_index_row = 0;
+    int c_as_g_index_col = 0;
+    int g_index_row = 0;
+    int g_index_col = 0;
+    int absDiff = 0;
+
+    // printf("widthIter %d; heightIter %d\n", widthIter, heightIter);
+    // getc(0);
+
+    for (int row = 0; row < dataSizeY; ++row) { // Iterate over c_as_g_image
+        // c_as_g_index_row = row * gridSizeX;
+        c_as_g_index_row = row;
+        for (int col = 0; col < dataSizeX; ++col) { // Iterate over c_as_g_image
+            // c_as_g_index_col = col * gridSizeY;
+            c_as_g_index_col = col;
+            for (int row_g = 0; row_g < dataSizeY; ++row_g) { // Iterate over g_image
+                // g_index_row = row_g * gridSizeX;
+                g_index_row = row_g;
+                for (int col_g = 0; col_g < dataSizeX; ++col_g) { // Iterate over g_image
+                    // g_index_col = col_g * gridSizeY;
+                    g_index_col = col_g;
+                    // printf("row: %d; col: %d; row_g: %d; col_g: %d, g_index_row: %d, g_index_col: %d, c_as_g_index_row: %d, c_as_g_index_col: %d\n", row, col, row_g, col_g, g_index_row, g_index_col, c_as_g_index_row, c_as_g_index_col);
+
+                    // Give the correct offset of c_as_g_image and g_image
+                    absDiff = compareGridsEachPixel(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
+                                                    g_image + g_index_col + (g_index_row * dataSizeX), 
+                                                    c_as_g_image,
+                                                    g_image,
+                                                    gridSizeX, 
+                                                    gridSizeY,
+                                                    dataSizeX,
+                                                    dataSizeY);
+                    if (absDiff < THRESHOLD) {
+                        if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                            // colorImagePatch(finalImage,
+                            //                 c_image,
+                            //                 gridSizeX, 
+                            //                 gridSizeY,
+                            //                 dataSizeX,
+                            //                 dataSizeY);
+                            // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                            //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                            //                 gridSizeX,
+                            //                 gridSizeY,
+                            //                 dataSizeX,
+                            //                 dataSizeY);
+                            colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                            getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                                            gridSizeX,
+                                            gridSizeY,
+                                            dataSizeX,
+                                            dataSizeY);
+                            // absDiffGrid[g_index_row][g_index_col] = absDiff;
+                            absDiffGrid[row_g][col_g] = absDiff; // row_g and col_g because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                            // printf("BOIBOI\n");
+                        } 
+                        else if (absDiff < absDiffGrid[row_g][col_g]){ // If new absDiff < previousAbsDiff then update
+                            colorImagePatchEachPixel(finalImage + g_index_col + (g_index_row * dataSizeX),
+                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                                            gridSizeX,
+                                            gridSizeY,
+                                            dataSizeX,
+                                            dataSizeY);
+                            absDiffGrid[row_g][col_g] = absDiff;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // printf("\n");
+}
+
 
 /**
  * Devide the whole image into grids of maskCols by maskRows size. So that the resulting image will have to iterated
@@ -91,6 +234,13 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
     int g_index_row = 0;
     int g_index_col = 0;
     int absDiff = 0;
+
+    // memset(absDiffGrid, 9999, heightIter * widthIter);
+    // for (int i = 0; i < widthIter; ++i) {
+    //     for (int j = 0; j < heightIter; ++j) {
+    //         absDiffGrid[i][j] = 99999;
+    //     }
+    // }
 
     printf("widthIter %d; heightIter %d\n", widthIter, heightIter);
     // getc(0);
@@ -179,6 +329,16 @@ void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *col
     scanf("%c",&ch);
 }
 
+void copyGrayscaleToFinal(unsigned char * finalImage, const unsigned char *g_image, int dataSizeX, int dataSizeY) {
+    for (int i = 0; i < dataSizeX; ++i) {
+        for (int j = 0; j < dataSizeY; ++j) {
+            finalImage[(i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
+            finalImage[1 + (i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
+            finalImage[2 + (i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
+        }
+    }
+}
+
 // g -> Grayscale
 // c -> Color
 int main(int argc, char *argv[]){
@@ -211,10 +371,12 @@ int main(int argc, char *argv[]){
     unsigned char *g_image = stbi_load(grayscaleImagePath, &g_width, &g_height, &g_bpp, 1 );
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
+    // copyGrayscaleToFinal(finalImage, g_image, g_width, g_height);
 
     printf("asdf\n");
 
     patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+    // patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
         /** Testing individual functions
      *  Color Image Patch function is working.
      *  CompareGrid Tested
