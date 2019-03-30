@@ -8,8 +8,8 @@
 #include <time.h>
 
 #define imgchannels 3
-#define maskCols 2
-#define maskRows 2
+#define maskCols 5
+#define maskRows 5
 // #define THRESHOLD 100 // In percentage
 #define MAXLEN 1024 // Max length of image paths
 
@@ -167,7 +167,8 @@ void patchMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_ima
                                                     dataSizeX,
                                                     dataSizeY);
                     if (absDiff < THRESHOLD) {
-                        if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                        // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                        if (absDiffGrid[row_g][col_g] == 0) {
                             // colorImagePatch(finalImage,
                             //                 c_image,
                             //                 gridSizeX, 
@@ -191,8 +192,8 @@ void patchMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_ima
                             // printf("BOIBOI\n");
                         } 
                         else if (absDiff < absDiffGrid[row_g][col_g]){ // If new absDiff < previousAbsDiff then update
-                            colorImagePatchEachPixel(finalImage + g_index_col + (g_index_row * dataSizeX),
-                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                            colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                            getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                             gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
@@ -236,11 +237,11 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
     int absDiff = 0;
 
     // memset(absDiffGrid, 9999, heightIter * widthIter);
-    // for (int i = 0; i < widthIter; ++i) {
-    //     for (int j = 0; j < heightIter; ++j) {
-    //         absDiffGrid[i][j] = 99999;
-    //     }
-    // }
+    for (int i = 0; i < widthIter; ++i) {
+        for (int j = 0; j < heightIter; ++j) {
+            absDiffGrid[j][i] = 0;
+        }
+    }
 
     printf("widthIter %d; heightIter %d\n", widthIter, heightIter);
     // getc(0);
@@ -263,32 +264,43 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
                                            dataSizeX,
                                            dataSizeY);
                     if (absDiff < THRESHOLD) {
-                        if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
-                            // colorImagePatch(finalImage,
-                            //                 c_image,
-                            //                 gridSizeX, 
-                            //                 gridSizeY,
-                            //                 dataSizeX,
-                            //                 dataSizeY);
-                            // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
-                            //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
-                            //                 gridSizeX,
-                            //                 gridSizeY,
-                            //                 dataSizeX,
-                            //                 dataSizeY);
+                        // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                        if (absDiffGrid[row_g][col_g] == 0) {
+                        //     // colorImagePatch(finalImage,
+                        //     //                 c_image,
+                        //     //                 gridSizeX, 
+                        //     //                 gridSizeY,
+                        //     //                 dataSizeX,
+                        //     //                 dataSizeY);
+                        //     // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                        //     //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                        //     //                 gridSizeX,
+                        //     //                 gridSizeY,
+                        //     //                 dataSizeX,
+                        //     //                 dataSizeY);
                             colorImagePatch(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
                                             getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                             gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
                                             dataSizeY);
-                            // absDiffGrid[g_index_row][g_index_col] = absDiff;
+                        //     // absDiffGrid[g_index_row][g_index_col] = absDiff;
                             absDiffGrid[row_g][col_g] = absDiff; // row_g and col_g because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
-                            // printf("BOIBOI\n");
-                        } 
+                        //     // printf("BOIBOI\n");
+                        // } 
+                        // else if (absDiff < absDiffGrid[row_g][col_g]){ // If new absDiff < previousAbsDiff then update
+                        //     colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                        //                     c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                        //                     gridSizeX,
+                        //                     gridSizeY,
+                        //                     dataSizeX,
+                        //                     dataSizeY);
+                        //     absDiffGrid[row_g][col_g] = absDiff;
+                        }
                         else if (absDiff < absDiffGrid[row_g][col_g]){ // If new absDiff < previousAbsDiff then update
-                            colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
-                                            c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                        // // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0'){
+                            colorImagePatch(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                            getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                             gridSizeX,
                                             gridSizeY,
                                             dataSizeX,
@@ -332,6 +344,8 @@ void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *col
 void copyGrayscaleToFinal(unsigned char * finalImage, const unsigned char *g_image, int dataSizeX, int dataSizeY) {
     for (int i = 0; i < dataSizeX; ++i) {
         for (int j = 0; j < dataSizeY; ++j) {
+            // if (finalImage[i + j * dataSizeX] != '\0')
+                // continue;
             finalImage[(i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
             finalImage[1 + (i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
             finalImage[2 + (i + dataSizeX * j) * 3] = g_image[i + j * dataSizeX];
@@ -347,10 +361,10 @@ int main(int argc, char *argv[]){
         return 1;
     }
     THRESHOLD = atoi(argv[1]);
-    char sizeOfAllImage[] = "256"; // Must be a square image and all must be of the same size
+    char sizeOfAllImage[] = "64"; // Must be a square image and all must be of the same size
     char grayscaleInputName[] = "Grayscale.jpg"; // Image to be colored
-    char coloredImageName[] = "forest_color.jpg"; // Image from which color will be taken
-    char coloredAsGrayscaleImageName[] = "forest_grays.jpg"; // The coloredImage changed to grayscale.
+    char coloredImageName[] = "person_color.jpg"; // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "person_grays.jpg"; // The coloredImage changed to grayscale.
 
     char grayscaleImagePath[MAXLEN] = {};
     char coloredImagePath[MAXLEN] = {};
@@ -371,12 +385,14 @@ int main(int argc, char *argv[]){
     unsigned char *g_image = stbi_load(grayscaleImagePath, &g_width, &g_height, &g_bpp, 1 );
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
-    // copyGrayscaleToFinal(finalImage, g_image, g_width, g_height);
+    copyGrayscaleToFinal(finalImage, g_image, g_width, g_height);
 
     printf("asdf\n");
 
-    patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
-    // patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+    // patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+    patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+
+
         /** Testing individual functions
      *  Color Image Patch function is working.
      *  CompareGrid Tested
