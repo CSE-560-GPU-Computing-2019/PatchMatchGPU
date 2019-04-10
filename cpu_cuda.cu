@@ -13,7 +13,7 @@
 // #define THRESHOLD 100 // In percentage
 #define MAXLEN 1024 // Max length of image paths
 #define IMGSIZE 128
-#define THRESHOLD_GPU 250
+#define THRESHOLD_GPU 200
 #define BLOCKSIZESQ 32
 
 int THRESHOLD = 0;
@@ -74,7 +74,7 @@ int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char
         }
         // printf("Value of abs at row %d is %d\n", row, absDiff);
     }
-
+    // printf("Value of absDiff is %d\n", absDiff);
     return absDiff;
 }
 
@@ -169,7 +169,7 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
             if (absDiff < THRESHOLD_GPU) {
                 // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
                 // printf("g_index_row %d, g_index_col %d\n", g_index_row, g_index_col);
-                if (absDiffGrid[threadIdx.x][threadIdx.y] == 0) {
+                if (absDiffGrid[threadIdx.y][threadIdx.x] == 0) {
                 //     // colorImagePatch(finalImage,
                 //     //                 c_image,
                 //     //                 gridSizeX, 
@@ -189,17 +189,17 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
                                     dataSizeX,
                                     dataSizeY);
                 //     // absDiffGrid[g_index_row][g_index_col] = absDiff;
-                    absDiffGrid[threadIdx.x][threadIdx.y] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
                 //     // printf("BOIBOI\n");
                 } 
-                else if (absDiff < absDiffGrid[threadIdx.x][threadIdx.y]){ // If new absDiff < previousAbsDiff then update
+                else if (absDiff < absDiffGrid[threadIdx.y][threadIdx.x]){ // If new absDiff < previousAbsDiff then update
                     colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
                                     getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                     gridSizeX,
                                     gridSizeY,
                                     dataSizeX,
                                     dataSizeY);
-                    absDiffGrid[threadIdx.x][threadIdx.y] = absDiff;
+                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff;
                 }
             }
 
@@ -511,7 +511,7 @@ int main(int argc, char *argv[]){
 
     clock_t t = clock();
     // patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
-    // patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+    patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
 
     t = clock() - t;
 
@@ -531,6 +531,7 @@ int main(int argc, char *argv[]){
     cudaMemcpy(d_c_image, c_image, 3 * c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_c_as_g_image, c_as_g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_g_image, g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_finalImage, finalImageByGPU, 3 *  c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
 
 
