@@ -13,7 +13,7 @@
 // #define THRESHOLD 100 // In percentage
 #define MAXLEN 1024 // Max length of image paths
 #define IMGSIZE 128
-#define THRESHOLD_GPU 100
+#define THRESHOLD_GPU 250
 #define BLOCKSIZESQ 32
 
 int THRESHOLD = 0;
@@ -169,7 +169,7 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
             if (absDiff < THRESHOLD_GPU) {
                 // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
                 // printf("g_index_row %d, g_index_col %d\n", g_index_row, g_index_col);
-                if (absDiffGrid[threadIdx.y][threadIdx.x] == 0) {
+                if (absDiffGrid[threadIdx.x][threadIdx.y] == 0) {
                 //     // colorImagePatch(finalImage,
                 //     //                 c_image,
                 //     //                 gridSizeX, 
@@ -189,17 +189,17 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
                                     dataSizeX,
                                     dataSizeY);
                 //     // absDiffGrid[g_index_row][g_index_col] = absDiff;
-                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                    absDiffGrid[threadIdx.x][threadIdx.y] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
                 //     // printf("BOIBOI\n");
                 } 
-                else if (absDiff < absDiffGrid[threadIdx.y][threadIdx.x]){ // If new absDiff < previousAbsDiff then update
+                else if (absDiff < absDiffGrid[threadIdx.x][threadIdx.y]){ // If new absDiff < previousAbsDiff then update
                     colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
                                     getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                     gridSizeX,
                                     gridSizeY,
                                     dataSizeX,
                                     dataSizeY);
-                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff;
+                    absDiffGrid[threadIdx.x][threadIdx.y] = absDiff;
                 }
             }
 
@@ -463,9 +463,9 @@ int main(int argc, char *argv[]){
     }
     THRESHOLD = atoi(argv[1]);
     char sizeOfAllImage[] = "128"; // Must be a square image and all must be of the same size
-    char grayscaleInputName[] = "test2/boat_gray.jpg";                    // Image to be colored
-    char coloredImageName[] = "test2/boat_color.jpg";                     // Image from which color will be taken
-    char coloredAsGrayscaleImageName[] = "test2/boat_color_grays.jpg";          // The coloredImage changed to grayscale.
+    char grayscaleInputName[] = "test/gray.jpg";                    // Image to be colored
+    char coloredImageName[] = "test/color.jpg";                     // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "test/color_grays.jpg";          // The coloredImage changed to grayscale.
     // char coloredAsGrayscaleImageName[] = "converted_color_";
 
     char grayscaleImagePath[MAXLEN] = {};
@@ -516,19 +516,19 @@ int main(int argc, char *argv[]){
     t = clock() - t;
 
     double time_taken = ((double)t) / CLOCKS_PER_SEC;
-    printf("Time Taken: %f\n", time_taken);
+    printf("Time Taken: %fms\n", time_taken * 1000);
 
 
     // GPU CODE HERE
     // Mallocs
-    cudaMalloc(&d_c_image, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_c_image, 3 * c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_c_as_g_image, c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_g_image, c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_finalImage, 3 * c_width * c_height * sizeof(unsigned char));
     cudaMemset(d_finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
     // Memcpy
-    cudaMemcpy(d_c_image, c_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_c_image, c_image, 3 * c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_c_as_g_image, c_as_g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_g_image, g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
@@ -550,9 +550,9 @@ int main(int argc, char *argv[]){
     cudaEventSynchronize(stop);
 
     cudaEventElapsedTime(&elapsedTime, start,stop);
-    printf("Elapsed time : %fs\n" ,elapsedTime);
+    printf("Elapsed time : %fms\n" ,elapsedTime);
     
-    cudaMemcpy(finalImageByGPU, d_finalImage, c_width * c_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(finalImageByGPU, d_finalImage, 3 *  c_width * c_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
     stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
     stbi_write_jpg(outputImagePathGPU, g_height, g_width, 3, finalImageByGPU, 0);
