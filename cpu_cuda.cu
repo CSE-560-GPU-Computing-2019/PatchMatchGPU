@@ -14,6 +14,7 @@
 #define MAXLEN 1024 // Max length of image paths
 #define IMGSIZE 128
 #define THRESHOLD_GPU 100
+#define BLOCKSIZESQ 32
 
 int THRESHOLD = 0;
 
@@ -136,7 +137,7 @@ void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image,
 __global__
 void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
 {
-    int absDiffGrid[IMGSIZE][IMGSIZE];
+    __shared__ int absDiffGrid[BLOCKSIZESQ][BLOCKSIZESQ];
     int c_as_g_index_row = 0;
     int c_as_g_index_col = 0;
     int g_index_row = 0;
@@ -145,6 +146,8 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
 
     g_index_row = threadIdx.y + blockIdx.y * blockDim.y;
     g_index_col = threadIdx.x + blockIdx.x * blockDim.x;
+
+    // printf("OPA\n");
 
     for (int row = 0; row < dataSizeY; ++row) { // Iterate over c_as_g_image
         // c_as_g_index_row = row * gridSizeX;
@@ -161,40 +164,42 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
                                                     gridSizeY,
                                                     dataSizeX,
                                                     dataSizeY);
-
+            // printf("OPA\n");
+            
             if (absDiff < THRESHOLD_GPU) {
                 // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
-                if (absDiffGrid[g_index_row][g_index_col] == 0) {
-                    // colorImagePatch(finalImage,
-                    //                 c_image,
-                    //                 gridSizeX, 
-                    //                 gridSizeY,
-                    //                 dataSizeX,
-                    //                 dataSizeY);
-                    // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
-                    //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
-                    //                 gridSizeX,
-                    //                 gridSizeY,
-                    //                 dataSizeX,
-                    //                 dataSizeY);
+                // printf("g_index_row %d, g_index_col %d\n", g_index_row, g_index_col);
+                if (absDiffGrid[threadIdx.y][threadIdx.x] == 0) {
+                //     // colorImagePatch(finalImage,
+                //     //                 c_image,
+                //     //                 gridSizeX, 
+                //     //                 gridSizeY,
+                //     //                 dataSizeX,
+                //     //                 dataSizeY);
+                //     // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                //     //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                //     //                 gridSizeX,
+                //     //                 gridSizeY,
+                //     //                 dataSizeX,
+                //     //                 dataSizeY);
                     colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
                                     getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                     gridSizeX,
                                     gridSizeY,
                                     dataSizeX,
                                     dataSizeY);
-                    // absDiffGrid[g_index_row][g_index_col] = absDiff;
-                    absDiffGrid[g_index_row][g_index_col] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
-                    // printf("BOIBOI\n");
+                //     // absDiffGrid[g_index_row][g_index_col] = absDiff;
+                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                //     // printf("BOIBOI\n");
                 } 
-                else if (absDiff < absDiffGrid[g_index_row][g_index_col]){ // If new absDiff < previousAbsDiff then update
+                else if (absDiff < absDiffGrid[threadIdx.y][threadIdx.x]){ // If new absDiff < previousAbsDiff then update
                     colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
                                     getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
                                     gridSizeX,
                                     gridSizeY,
                                     dataSizeX,
                                     dataSizeY);
-                    absDiffGrid[g_index_row][g_index_col] = absDiff;
+                    absDiffGrid[threadIdx.y][threadIdx.x] = absDiff;
                 }
             }
 
@@ -416,6 +421,7 @@ void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *col
     printf("coloredImagePath: %s\n", coloredImagePath);
     printf("coloredAsGrayscaleImagePath: %s\n", coloredAsGrayscaleImagePath);
     printf("outputImagePath: %s\n", outputImagePath);
+    printf("outputImagePathGPU: %s\n", outputImagePathGPU);
     // printf("Press any key to continue\n");
     // scanf("%c",&ch);
 }
@@ -494,6 +500,7 @@ int main(int argc, char *argv[]){
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImageByGPU, '\0', 3 * g_width * g_height * sizeof(unsigned char));
     copyGrayscaleToFinal(finalImage, g_image, g_width, g_height);
+    copyGrayscaleToFinal(finalImageByGPU, g_image, g_width, g_height);
 
     // Convert colored image to grayscale
     // convertToGrayscale(c_as_g_image_load, c_image, c_width, c_height);
@@ -504,7 +511,7 @@ int main(int argc, char *argv[]){
 
     clock_t t = clock();
     // patchMatch(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
-    patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
+    // patchMatchEachPixel(c_image, c_as_g_image, g_image, finalImage, maskCols, maskRows, c_width, c_height);
 
     t = clock() - t;
 
@@ -517,7 +524,8 @@ int main(int argc, char *argv[]){
     cudaMalloc(&d_c_image, c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_c_as_g_image, c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_g_image, c_width * c_height * sizeof(unsigned char));
-    cudaMalloc(&d_finalImage, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_finalImage, 3 * c_width * c_height * sizeof(unsigned char));
+    cudaMemset(d_finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
     // Memcpy
     cudaMemcpy(d_c_image, c_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
@@ -526,13 +534,14 @@ int main(int argc, char *argv[]){
 
 
 
-    int numOfThreadSq = 32;
+    int numOfThreadSq = BLOCKSIZESQ;
     dim3 threadsPerBlock(numOfThreadSq, numOfThreadSq);
     dim3 numOfBlocks(g_width/numOfThreadSq, g_height/numOfThreadSq);
 
     cudaEventCreate(&start);
     cudaEventRecord(start,0);
 
+    gpuPathMatchEachPixel<<<numOfBlocks, threadsPerBlock>>>(d_c_image, d_c_as_g_image, d_g_image, d_finalImage, maskCols, maskRows, c_width, c_height);
 
 
     cudaEventCreate(&stop);
