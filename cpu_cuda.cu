@@ -12,12 +12,15 @@
 #define maskRows 5
 // #define THRESHOLD 100 // In percentage
 #define MAXLEN 1024 // Max length of image paths
+#define IMGSIZE 128
+#define THRESHOLD_GPU 100
 
 int THRESHOLD = 0;
 
 // To access grayscale value at (i, j) or (x, y) do x + y * img_width
 
 // To access rgb values of colored image, on the returned value index 0 is R, index 1 if G and 2 is B
+__host__ __device__
 unsigned char *getRGBOffset(int i, int j, unsigned char *c_image, int img_height, int img_width) {
     return c_image + (i + img_height * j) * 3;
 }
@@ -48,6 +51,7 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
 }
 
 // Send offset of image to the beginning or top-left of the starting of the grid.
+__host__ __device__
 int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char *g_image, const unsigned char *c_as_g_image_BASE, const unsigned char *g_image_BASE, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
     int sum_c_as_g = 0;
     int sum_g = 0;
@@ -99,6 +103,7 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
  * Provide correct offsets of final Image this code assumes that finalImage point to the grid where the color it to be copied to.
  * Same goes for c_image COLORS PIXEL INSTEAD OF GRID
  */
+__host__ __device__
 void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
     unsigned char *c_image_pixel;
     unsigned char *finalImage_pixel;
@@ -126,6 +131,76 @@ void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image,
     //     }
     // }
     // printf("HEREBOID\n");
+}
+
+__global__
+void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
+{
+    int absDiffGrid[IMGSIZE][IMGSIZE];
+    int c_as_g_index_row = 0;
+    int c_as_g_index_col = 0;
+    int g_index_row = 0;
+    int g_index_col = 0;
+    int absDiff = 0;
+
+    g_index_row = threadIdx.y + blockIdx.y * blockDim.y;
+    g_index_col = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int row = 0; row < dataSizeY; ++row) { // Iterate over c_as_g_image
+        // c_as_g_index_row = row * gridSizeX;
+        c_as_g_index_row = row;
+        for (int col = 0; col < dataSizeX; ++col) { // Iterate over c_as_g_image
+            // c_as_g_index_col = col * gridSizeY;
+            c_as_g_index_col = col;
+
+            absDiff = compareGridsEachPixel(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
+                                                    g_image + g_index_col + (g_index_row * dataSizeX), 
+                                                    c_as_g_image,
+                                                    g_image,
+                                                    gridSizeX, 
+                                                    gridSizeY,
+                                                    dataSizeX,
+                                                    dataSizeY);
+
+            if (absDiff < THRESHOLD_GPU) {
+                // if (finalImage[g_index_col + g_index_row * gridSizeX] == '\0') {
+                if (absDiffGrid[g_index_row][g_index_col] == 0) {
+                    // colorImagePatch(finalImage,
+                    //                 c_image,
+                    //                 gridSizeX, 
+                    //                 gridSizeY,
+                    //                 dataSizeX,
+                    //                 dataSizeY);
+                    // colorImagePatch(finalImage + g_index_col + (g_index_row * dataSizeX),
+                    //                 c_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX),
+                    //                 gridSizeX,
+                    //                 gridSizeY,
+                    //                 dataSizeX,
+                    //                 dataSizeY);
+                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                                    gridSizeX,
+                                    gridSizeY,
+                                    dataSizeX,
+                                    dataSizeY);
+                    // absDiffGrid[g_index_row][g_index_col] = absDiff;
+                    absDiffGrid[g_index_row][g_index_col] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
+                    // printf("BOIBOI\n");
+                } 
+                else if (absDiff < absDiffGrid[g_index_row][g_index_col]){ // If new absDiff < previousAbsDiff then update
+                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
+                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                                    gridSizeX,
+                                    gridSizeY,
+                                    dataSizeX,
+                                    dataSizeY);
+                    absDiffGrid[g_index_row][g_index_col] = absDiff;
+                }
+            }
+
+        }
+
+    }
 }
 
 
@@ -319,15 +394,19 @@ void patchMatch(unsigned char *c_image, const unsigned char *c_as_g_image, const
 void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *coloredImageName, 
                        char *coloredAsGrayscaleImageName, char *grayscaleImagePath,
                        char *coloredImagePath, char *coloredAsGrayscaleImagePath,
-                       char * outputImagePath) {
+                       char * outputImagePath,
+                       char * outputImagePathGPU) {
     char folderName[] = "Images";
     char ch;
     snprintf(grayscaleImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, grayscaleInputName);
     snprintf(coloredImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, coloredImageName);
     snprintf(coloredAsGrayscaleImagePath, MAXLEN, "%s/%s/%s", folderName, sizeOfAllImage, coloredAsGrayscaleImageName);
     snprintf(outputImagePath, MAXLEN, "%s/%s/", folderName, sizeOfAllImage);
+    snprintf(outputImagePathGPU, MAXLEN, "%s/%s/", folderName, sizeOfAllImage);
+    strncat(outputImagePathGPU, grayscaleInputName, strrchr(grayscaleInputName, '.') - grayscaleInputName);
     strncat(outputImagePath, grayscaleInputName, strrchr(grayscaleInputName, '.') - grayscaleInputName);
     strcat(outputImagePath, "_colored.jpg");
+    strcat(outputImagePathGPU, "_colored_GPU.jpg");
 
     // printf("Input . start at %s\n", strrchr(grayscaleInputName, '.'));
 
@@ -387,20 +466,33 @@ int main(int argc, char *argv[]){
     char coloredImagePath[MAXLEN] = {};
     char coloredAsGrayscaleImagePath[MAXLEN] = {};
     char outputImagePath[MAXLEN] = {};
+    char outputImagePathGPU[MAXLEN] = {};
 
+    // Cuda variables
+    cudaEvent_t start, stop;
+    float elapsedTime;
+    unsigned char *d_c_image;
+    unsigned char *d_c_as_g_image;
+    unsigned char *d_g_image;
+    unsigned char *d_finalImage;
+    
 
     int c_width, c_height, c_bpp; // For reading color image
     int c_as_g_width, c_as_g_height, c_as_g_bpp; // For reading grayscale of color iamge. Don't have a way to convert to grayscale in the code.
     int g_width, g_height, g_bpp; // Image to be colored
     unsigned char *finalImage, *c_as_g_image_load; // To be written
+    unsigned char *finalImageByGPU;
 
-    generatePathNames(sizeOfAllImage, grayscaleInputName, coloredImageName, coloredAsGrayscaleImageName, grayscaleImagePath, coloredImagePath, coloredAsGrayscaleImagePath, outputImagePath);
+
+    generatePathNames(sizeOfAllImage, grayscaleInputName, coloredImageName, coloredAsGrayscaleImageName, grayscaleImagePath, coloredImagePath, coloredAsGrayscaleImagePath, outputImagePath, outputImagePathGPU);
 
     unsigned char *c_image = stbi_load(coloredImagePath, &c_width, &c_height, &c_bpp, imgchannels );
     unsigned char *c_as_g_image = stbi_load(coloredAsGrayscaleImagePath, &c_as_g_width, &c_as_g_height, &c_as_g_bpp, 1 );
     unsigned char *g_image = stbi_load(grayscaleImagePath, &g_width, &g_height, &g_bpp, 1 );
     finalImage = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
+    finalImageByGPU = (unsigned char*) malloc(3 * g_width * g_height * sizeof(unsigned char));
     memset(finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
+    memset(finalImageByGPU, '\0', 3 * g_width * g_height * sizeof(unsigned char));
     copyGrayscaleToFinal(finalImage, g_image, g_width, g_height);
 
     // Convert colored image to grayscale
@@ -420,8 +512,46 @@ int main(int argc, char *argv[]){
     printf("Time Taken: %f\n", time_taken);
 
 
+    // GPU CODE HERE
+    // Mallocs
+    cudaMalloc(&d_c_image, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_c_as_g_image, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_g_image, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_finalImage, c_width * c_height * sizeof(unsigned char));
+
+    // Memcpy
+    cudaMemcpy(d_c_image, c_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_c_as_g_image, c_as_g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_g_image, g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+
+
+
+    int numOfThreadSq = 32;
+    dim3 threadsPerBlock(numOfThreadSq, numOfThreadSq);
+    dim3 numOfBlocks(g_width/numOfThreadSq, g_height/numOfThreadSq);
+
+    cudaEventCreate(&start);
+    cudaEventRecord(start,0);
+
+
+
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(stop,0);
+    cudaEventSynchronize(stop);
+
+    cudaEventElapsedTime(&elapsedTime, start,stop);
+    printf("Elapsed time : %fs\n" ,elapsedTime);
+    
+    cudaMemcpy(finalImageByGPU, d_finalImage, c_width * c_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+
     stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
+    stbi_write_jpg(outputImagePathGPU, g_height, g_width, 3, finalImageByGPU, 0);
 
     free(finalImage);
+    cudaFree(d_c_image);
+    cudaFree(d_c_as_g_image);
+    cudaFree(d_g_image);
+    cudaFree(d_finalImage);
     return 0;
 }
