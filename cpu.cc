@@ -378,9 +378,9 @@ int main(int argc, char *argv[]){
     }
     THRESHOLD = atoi(argv[1]);
     char sizeOfAllImage[] = "128"; // Must be a square image and all must be of the same size
-    char grayscaleInputName[] = "test2/boat_gray.jpg";                    // Image to be colored
-    char coloredImageName[] = "test2/boat_color.jpg";                     // Image from which color will be taken
-    char coloredAsGrayscaleImageName[] = "test2/boat_color_grays.jpg";          // The coloredImage changed to grayscale.
+    char grayscaleInputName[] = "test/gray.jpg";                    // Image to be colored
+    char coloredImageName[] = "test/color.jpg";                     // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "test/color_grays.jpg";          // The coloredImage changed to grayscale.
     // char coloredAsGrayscaleImageName[] = "converted_color_";
 
     char grayscaleImagePath[MAXLEN] = {};
