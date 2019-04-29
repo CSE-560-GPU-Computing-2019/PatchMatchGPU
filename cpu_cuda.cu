@@ -53,23 +53,23 @@ int compareGrids(const unsigned char *c_as_g_image, const unsigned char *g_image
 
 // Send offset of image to the beginning or top-left of the starting of the grid.
 __host__ __device__
-int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char *g_image, const unsigned char *c_as_g_image_BASE, const unsigned char *g_image_BASE, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char *g_image, const unsigned char *c_as_g_image_BASE, const unsigned char *g_image_BASE, int gridSizeX, int gridSizeY, int c_width, int c_height, int g_width, int g_height) {
     int sum_c_as_g = 0;
     int sum_g = 0;
     int absDiff = 0;
 
     for (int row = -2; row < gridSizeY/2; ++row) {
         for (int col = -2; col < gridSizeX/2; ++col) {
-            if (c_as_g_image + col + row * dataSizeX < c_as_g_image_BASE)
+            if (c_as_g_image + col + row * c_width < c_as_g_image_BASE)
                 continue;
-            if (g_image + col + row * dataSizeX < g_image_BASE)
+            if (g_image + col + row * g_width < g_image_BASE)
                 continue;
-            if (c_as_g_image + col + row * dataSizeX > c_as_g_image_BASE + dataSizeX * dataSizeY)
+            if (c_as_g_image + col + row * c_width > c_as_g_image_BASE + c_width * c_height)
                 continue;
-            if (g_image + col + row * dataSizeX > g_image_BASE + dataSizeX * dataSizeY)
+            if (g_image + col + row * g_width > g_image_BASE + g_width * g_height)
                 continue;
-            sum_c_as_g = c_as_g_image[col + row * dataSizeX];
-            sum_g = g_image[col + row * dataSizeX];
+            sum_c_as_g = c_as_g_image[col + row * c_width];
+            sum_g = g_image[col + row * g_width];
             absDiff += abs(sum_c_as_g - sum_g);
         }
         // printf("Value of abs at row %d is %d\n", row, absDiff);
@@ -105,7 +105,7 @@ void colorImagePatch(unsigned char *finalImage, unsigned char *c_image, int grid
  * Same goes for c_image COLORS PIXEL INSTEAD OF GRID
  */
 __host__ __device__
-void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY) {
+void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image, int gridSizeX, int gridSizeY, int c_width, int c_height, int g_width, int g_height) {
     unsigned char *c_image_pixel;
     unsigned char *finalImage_pixel;
 
@@ -114,8 +114,8 @@ void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image,
     // if (c_image + 2 * dataSizeX + 2 > strlen(c_image))
     //     return;
 
-    c_image_pixel = getRGBOffset(0, 0, c_image, dataSizeY, dataSizeX);
-    finalImage_pixel = getRGBOffset(0, 0, finalImage, dataSizeY, dataSizeX);
+    c_image_pixel = getRGBOffset(0, 0, c_image, c_height, c_width);
+    finalImage_pixel = getRGBOffset(0, 0, finalImage, g_height, g_width);
     // finalImage[col + row * gridSizeX] = ;
     finalImage_pixel[0] = c_image_pixel[0]; // Copy R
     finalImage_pixel[1] = c_image_pixel[1]; // Copy G
@@ -135,7 +135,7 @@ void colorImagePatchEachPixel(unsigned char *finalImage, unsigned char *c_image,
 }
 
 __global__
-void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int dataSizeX, int dataSizeY)
+void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int c_width, int c_height, int g_width, int g_height)
 {
     __shared__ int absDiffGrid[BLOCKSIZESQ][BLOCKSIZESQ];
     int c_as_g_index_row = 0;
@@ -149,21 +149,20 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
 
     // printf("OPA\n");
 
-    for (int row = 0; row < dataSizeY; ++row) { // Iterate over c_as_g_image
+    for (int row = 0; row < c_height; ++row) { // Iterate over c_as_g_image
         // c_as_g_index_row = row * gridSizeX;
         c_as_g_index_row = row;
-        for (int col = 0; col < dataSizeX; ++col) { // Iterate over c_as_g_image
+        for (int col = 0; col < c_width; ++col) { // Iterate over c_as_g_image
             // c_as_g_index_col = col * gridSizeY;
             c_as_g_index_col = col;
 
-            absDiff = compareGridsEachPixel(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * dataSizeX), 
-                                                    g_image + g_index_col + (g_index_row * dataSizeX), 
+            absDiff = compareGridsEachPixel(c_as_g_image + c_as_g_index_col + (c_as_g_index_row * c_width), 
+                                                    g_image + g_index_col + (g_index_row * g_width), 
                                                     c_as_g_image,
                                                     g_image,
                                                     gridSizeX, 
                                                     gridSizeY,
-                                                    dataSizeX,
-                                                    dataSizeY);
+                                                    c_width, c_height, g_width, g_height);
             // printf("OPA\n");
             
             if (absDiff < THRESHOLD_GPU) {
@@ -182,23 +181,21 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
                 //     //                 gridSizeY,
                 //     //                 dataSizeX,
                 //     //                 dataSizeY);
-                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
-                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, g_width, g_height),
+                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, c_width, c_height),
                                     gridSizeX,
                                     gridSizeY,
-                                    dataSizeX,
-                                    dataSizeY);
+                                    c_width, c_height, g_width, g_height);
                 //     // absDiffGrid[g_index_row][g_index_col] = absDiff;
                     absDiffGrid[threadIdx.y][threadIdx.x] = absDiff; // g_index_row and g_index_col because the above commented line was going out of scope because absDiff is reduced size grid (check at top)
                 //     // printf("BOIBOI\n");
                 } 
                 else if (absDiff < absDiffGrid[threadIdx.y][threadIdx.x]){ // If new absDiff < previousAbsDiff then update
-                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, dataSizeY, dataSizeX),
-                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, dataSizeY, dataSizeX),
+                    colorImagePatchEachPixel(getRGBOffset(g_index_col, g_index_row, finalImage, g_width, g_height),
+                                    getRGBOffset(c_as_g_index_col, c_as_g_index_row, c_image, c_width, c_height),
                                     gridSizeX,
                                     gridSizeY,
-                                    dataSizeX,
-                                    dataSizeY);
+                                    c_width, c_height, g_width, g_height);
                     absDiffGrid[threadIdx.y][threadIdx.x] = absDiff;
                 }
             }
@@ -542,7 +539,7 @@ int main(int argc, char *argv[]){
     cudaEventCreate(&start);
     cudaEventRecord(start,0);
 
-    gpuPathMatchEachPixel<<<numOfBlocks, threadsPerBlock>>>(d_c_image, d_c_as_g_image, d_g_image, d_finalImage, maskCols, maskRows, c_width, c_height);
+    gpuPathMatchEachPixel<<<numOfBlocks, threadsPerBlock>>>(d_c_image, d_c_as_g_image, d_g_image, d_finalImage, maskCols, maskRows, c_width, c_height, g_width, g_height);
 
 
     cudaEventCreate(&stop);
