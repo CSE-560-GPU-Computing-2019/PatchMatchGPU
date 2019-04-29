@@ -98,15 +98,19 @@ __global__
 void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_image, const unsigned char *g_image, unsigned char *finalImage, int gridSizeX, int gridSizeY, int c_width, int c_height, int g_width, int g_height, int threshold)
 {
     __shared__ int absDiffGrid[BLOCKSIZESQ][BLOCKSIZESQ];
+    
     int c_as_g_index_row = 0;
     int c_as_g_index_col = 0;
     int g_index_row = 0;
     int g_index_col = 0;
     int absDiff = 0;
-
+    
     g_index_row = threadIdx.y + blockIdx.y * blockDim.y;
     g_index_col = threadIdx.x + blockIdx.x * blockDim.x;
+    
+    absDiffGrid[threadIdx.y][threadIdx.x] = 0;
 
+    __syncthreads();
     // printf("OPA\n");
 
     for (int row = 0; row < c_height; ++row) { // Iterate over c_as_g_image
@@ -236,10 +240,10 @@ int main(int argc, char *argv[]){
         return 1;
     }
     int threshold = atoi(argv[1]);
-    char sizeOfAllImage[] = "128"; // Must be a square image and all must be of the same size
-    char grayscaleInputName[] = "1.jpg";                    // Image to be colored
-    char coloredImageName[] = "1.jpg";                     // Image from which color will be taken
-    char coloredAsGrayscaleImageName[] = "1.jpg";          // The coloredImage changed to grayscale.
+    char sizeOfAllImage[] = "512"; // Must be a square image and all must be of the same size
+    char grayscaleInputName[] = "2.jpg";                    // Image to be colored
+    char coloredImageName[] = "2.jpg";                     // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "2.jpg";          // The coloredImage changed to grayscale.
     // char coloredAsGrayscaleImageName[] = "converted_color_";
 
     char grayscaleImagePath[MAXLEN] = {};
@@ -328,8 +332,11 @@ int main(int argc, char *argv[]){
     printf("Without IO: %fms\n" ,elapsedTime);
     
     cudaMemcpy(finalImageByGPU, d_finalImage, 3 *  g_width * g_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    
+    t = clock() - t;
+    double time_taken = ((double)t) / CLOCKS_PER_SEC;
+    printf("With IO: %fms\n", time_taken * 1000);
 
-    stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
     stbi_write_jpg(outputImagePathGPU, g_width, g_height, 3, finalImageByGPU, 0);
 
     free(finalImage);
@@ -338,8 +345,5 @@ int main(int argc, char *argv[]){
     cudaFree(d_g_image);
     cudaFree(d_finalImage);
 
-    t = clock() - t;
-    double time_taken = ((double)t) / CLOCKS_PER_SEC;
-    printf("With IO: %fms\n", time_taken * 1000);
     return 0;
 }
