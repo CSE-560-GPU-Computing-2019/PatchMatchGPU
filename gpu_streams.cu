@@ -299,15 +299,15 @@ int main(int argc, char *argv[]){
     
     cudaMalloc(&d_c_image, 3 * c_width * c_height * sizeof(unsigned char));
     cudaMalloc(&d_c_as_g_image, c_width * c_height * sizeof(unsigned char));
-    cudaMalloc(&d_g_image, g_width * g_height * sizeof(unsigned char));
-    cudaMalloc(&d_finalImage, 3 * g_width * g_height * sizeof(unsigned char));
+    cudaMalloc(&d_g_image, c_width * c_height * sizeof(unsigned char));
+    cudaMalloc(&d_finalImage, 3 * c_width * c_height * sizeof(unsigned char));
     cudaMemset(d_finalImage, '\0', 3 * g_width * g_height * sizeof(unsigned char));
 
     // Memcpy
     cudaMemcpy(d_c_image, c_image, 3 * c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMemcpy(d_c_as_g_image, c_as_g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_g_image, g_image, g_width * g_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_finalImage, finalImageByGPU, 3 *  g_width * g_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_g_image, g_image, c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_finalImage, finalImageByGPU, 3 *  c_width * c_height * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
     int numOfThreadSq = BLOCKSIZESQ;
     dim3 threadsPerBlock(numOfThreadSq, numOfThreadSq);
@@ -327,7 +327,7 @@ int main(int argc, char *argv[]){
     cudaEventElapsedTime(&elapsedTime, start,stop);
     printf("Without IO: %fms\n" ,elapsedTime);
     
-    cudaMemcpy(finalImageByGPU, d_finalImage, 3 *  g_width * g_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(finalImageByGPU, d_finalImage, 3 *  c_width * c_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
     stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
     stbi_write_jpg(outputImagePathGPU, g_width, g_height, 3, finalImageByGPU, 0);
