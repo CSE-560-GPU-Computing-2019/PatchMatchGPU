@@ -31,6 +31,7 @@ unsigned char *getIMGOffset(int i, int j, unsigned char *c_image, int img_height
     return c_image + (i + img_height * j);
 }
 
+
 // Send offset of image to the beginning or top-left of the starting of the grid.
 __host__ __device__
 int compareGridsEachPixel(const unsigned char *c_as_g_image, const unsigned char *g_image, const unsigned char *c_as_g_image_BASE, const unsigned char *g_image_BASE, int gridSizeX, int gridSizeY, int c_width, int c_height, int g_width, int g_height) {
@@ -169,7 +170,8 @@ void gpuPathMatchEachPixel(unsigned char *c_image, const unsigned char *c_as_g_i
 void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *coloredImageName, 
                        char *coloredAsGrayscaleImageName, char *grayscaleImagePath,
                        char *coloredImagePath, char *coloredAsGrayscaleImagePath,
-                       char * outputImagePath) {
+                       char * outputImagePath,
+                       char * outputImagePathGPU) {
     char folderName[] = "Images";
     char input_to_be_colored[] = "input_to_be_colored";
     char input_color_name[] = "input_color";
@@ -179,9 +181,12 @@ void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *col
     snprintf(coloredImagePath, MAXLEN, "%s/%s/%s/%s", folderName, sizeOfAllImage, input_color_name, coloredImageName);
     snprintf(coloredAsGrayscaleImagePath, MAXLEN, "%s/%s/%s/%s", folderName, sizeOfAllImage, input_grayscale_name, coloredAsGrayscaleImageName);
     snprintf(outputImagePath, MAXLEN, "%s/%s/%s/%s", folderName, sizeOfAllImage, "output", grayscaleInputName);
-
+    snprintf(outputImagePathGPU, MAXLEN, "%s/%s/%s/", folderName, sizeOfAllImage, "output");
+    // snprintf(outputImagePathGPU, MAXLEN, "%s/%s/", folderName, sizeOfAllImage);
+    strncat(outputImagePathGPU, grayscaleInputName, strrchr(grayscaleInputName, '.') - grayscaleInputName);
     // strncat(outputImagePath, grayscaleInputName, strrchr(grayscaleInputName, '.') - grayscaleInputName);
     // strcat(outputImagePath, "_colored.jpg");
+    strcat(outputImagePathGPU, "_GPU.jpg");
 
     // printf("Input . start at %s\n", strrchr(grayscaleInputName, '.'));
 
@@ -190,11 +195,11 @@ void generatePathNames(char *sizeOfAllImage, char *grayscaleInputName, char *col
     printf("grayscaleImagePath: %s\n", grayscaleImagePath);
     printf("coloredImagePath: %s\n", coloredImagePath);
     printf("coloredAsGrayscaleImagePath: %s\n", coloredAsGrayscaleImagePath);
-    printf("outputImagePath: %s\n", outputImagePath);
+    // printf("outputImagePath: %s\n", outputImagePath);
+    printf("outputImagePathGPU: %s\n", outputImagePathGPU);
     // printf("Press any key to continue\n");
     // scanf("%c",&ch);
 }
-
 
 void copyGrayscaleToFinal(unsigned char * finalImage, const unsigned char *g_image, int dataSizeX, int dataSizeY) {
     for (int i = 0; i < dataSizeX; ++i) {
