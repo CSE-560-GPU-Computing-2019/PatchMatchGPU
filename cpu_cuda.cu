@@ -331,7 +331,7 @@ int main(int argc, char *argv[]){
     cudaMemcpy(finalImageByGPU, d_finalImage, 3 *  c_width * c_height * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
     stbi_write_jpg(outputImagePath, g_height, g_width, 3, finalImage, 0);
-    stbi_write_jpg(outputImagePathGPU, g_height, g_width, 3, finalImageByGPU, 0);
+    stbi_write_jpg(outputImagePathGPU, g_width, g_height, 3, finalImageByGPU, 0);
 
     free(finalImage);
     cudaFree(d_c_image);
