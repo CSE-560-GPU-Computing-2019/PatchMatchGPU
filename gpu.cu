@@ -240,10 +240,10 @@ int main(int argc, char *argv[]){
         return 1;
     }
     int threshold = atoi(argv[1]);
-    char sizeOfAllImage[] = "256"; // Must be a square image and all must be of the same size
-    char grayscaleInputName[] = "6.jpg";                    // Image to be colored
-    char coloredImageName[] = "6.jpg";                     // Image from which color will be taken
-    char coloredAsGrayscaleImageName[] = "6.jpg";          // The coloredImage changed to grayscale.
+    char sizeOfAllImage[] = "768"; // Must be a square image and all must be of the same size
+    char grayscaleInputName[] = "7.jpg";                    // Image to be colored
+    char coloredImageName[] = "7.jpg";                     // Image from which color will be taken
+    char coloredAsGrayscaleImageName[] = "7.jpg";          // The coloredImage changed to grayscale.
     // char coloredAsGrayscaleImageName[] = "converted_color_";
 
     char grayscaleImagePath[MAXLEN] = {};
